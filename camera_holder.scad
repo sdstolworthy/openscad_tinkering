@@ -7,7 +7,7 @@ camera_back_thickness = 29;
 camera_front_thickness = 33;
 camera_max_thickness = max(camera_back_thickness, camera_front_thickness);
 camera_depth = 34;
-camera_width = 107;
+camera_width = 106;
 camera_holder_depth = camera_depth + wall_thickness * 2;
 camera_holder_height = camera_max_thickness + wall_thickness;
 
@@ -17,7 +17,9 @@ holder_height = bar_thickness + (wall_thickness * 3) + camera_max_thickness;
 holder_width = camera_width;
 holder_opening_height = bar_thickness - ledge_size * 2;
 
-fork_size = 15;
+fork_size = 22;
+
+cable_indent = 32;
 
 camera_bar_depth_delta = camera_depth - bar_thickness;
 
@@ -53,6 +55,12 @@ module camera_exclusion() {
     }
 }
 
+module cable_exclusion() {
+  translate([22,0,0]) {
+    cube([8,camera_depth,camera_max_thickness]);
+  }
+}
+
 module base_cube() {
     union() {
         translate([0, camera_bar_depth_delta, 0]) {
@@ -65,8 +73,8 @@ module base_cube() {
 difference() {
     base_cube();
     camera_exclusion();
+    cable_exclusion();
     bar_exclusion();
     fork_exclusion();
 }
-
 
