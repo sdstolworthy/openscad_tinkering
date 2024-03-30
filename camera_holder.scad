@@ -1,5 +1,5 @@
-wall_thickness=2.5;
-ledge_size = 2;
+wall_thickness=1.5;
+ledge_size = 1;
 
 bar_thickness = 21.5;
 
@@ -7,17 +7,16 @@ camera_back_thickness = 29;
 camera_front_thickness = 33;
 camera_max_thickness = max(camera_back_thickness, camera_front_thickness);
 camera_depth = 34;
-camera_width = 106;
+fork_size = 22;
 camera_holder_depth = camera_depth + wall_thickness * 2;
 camera_holder_height = camera_max_thickness + wall_thickness;
 
 
 holder_depth = bar_thickness + wall_thickness * 2;
 holder_height = bar_thickness + (wall_thickness * 3) + camera_max_thickness;
-holder_width = camera_width;
+holder_width = fork_size;
 holder_opening_height = bar_thickness - ledge_size * 2;
 
-fork_size = 22;
 
 cable_indent = 32;
 
@@ -70,11 +69,21 @@ module base_cube() {
     }
 }
 
-difference() {
-    base_cube();
-    camera_exclusion();
-    cable_exclusion();
-    bar_exclusion();
-    fork_exclusion();
+module bar_grip() {
+  difference() {
+    cube([fork_size, bar_thickness + wall_thickness * 2, bar_thickness + wall_thickness * 2]);
+    translate([0, wall_thickness, wall_thickness]) cube([fork_size, bar_thickness, bar_thickness]);
+    translate([0, wall_thickness + bar_thickness, wall_thickness +ledge_size]) cube([fork_size,wall_thickness, bar_thickness - ledge_size * 2]);
+  }
 }
+
+module camera_holder() {
+  difference() {
+    cube([fork_size, camera_depth + wall_thickness , camera_max_thickness + wall_thickness * 2]);
+    translate([0, wall_thickness, wall_thickness]) cube([fork_size, camera_depth, camera_max_thickness]);
+  }
+}
+
+translate([0, camera_depth + wall_thickness, wall_thickness + camera_max_thickness - 13.4]) bar_grip();
+camera_holder();
 
