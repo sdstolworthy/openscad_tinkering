@@ -1,3 +1,4 @@
+upper_bowl_back_lip = 3;
 marble_size = 16.8;
 marble_scale_factor = 1.5;
 adjusted_marble_size = marble_size * marble_scale_factor;
@@ -9,6 +10,7 @@ upper_bowl_height = 4;
 upper_plate_thickness = 3;
 channel_radius = adjusted_marble_size / 2;
 upper_height = upper_ramp - channel_radius + adjusted_marble_size + upper_plate_thickness + upper_bowl_height;
+plate_height = upper_height - upper_bowl_height - upper_plate_thickness;
 lower_height = 26;
 deck_difference = upper_height - lower_height;
 total_depth = lower_depth + upper_depth;
@@ -49,7 +51,7 @@ module channel(channel_number) {
   }
 }
 
-module ramp() {
+module ramp(x, y, z) {
   polyhedron(points = [
     [wall, wall, lower_ramp],
     [wall, total_depth , lower_ramp],
@@ -59,6 +61,8 @@ module ramp() {
     [width - wall, wall, upper_ramp]
   ], faces=[[0,1,2,3],[5,4,3,2],[0,4,5,1],[0,3,4],[5,2,1]]);
 }
+
+ramp(width - wall * 2, total_depth, upper_ramp - lower_ramp)
 
 module channels() {
   for (x_index = [0:4]) {
@@ -80,8 +84,23 @@ module inner_lower_deck(height = lower_height) {
   translate([wall, wall, wall]) deck(total_depth - wall * 2, width - wall * 2, height - wall);
 }
 
-module inner_upper_deck(height = deck_difference) {
-  translate([wall, wall, lower_height]) deck(upper_depth - wall * 2, width - wall * 2, height);
+module inner_upper_deck(height = deck_difference, z = lower_height) {
+  translate([wall, wall, z]) deck(upper_depth - wall * 2, width - wall * 2, height);
+}
+
+module upper_plate() {
+  difference() {
+    inner_upper_deck(upper_plate_thickness, z = 0);
+    for (x = [0:4]) {
+      x_offset = getChannelSpacing(x);
+      translate([x_offset - channel_radius, wall + upper_bowl_back_lip, 0]) cube([channel_radius * 2, channel_radius * 2, upper_plate_thickness]);
+    }
+    translate([width / 2 + 42, upper_depth / 2, 1]) linear_extrude(upper_plate_thickness) rotate(180) text("Potion Explosion", size = 10, font = "Z003");
+  }
+}
+
+module stud() {
+  cylinder(r=3, $fn = 3);
 }
 
 
@@ -90,11 +109,11 @@ difference() {
     difference() {
       union() {
         lower_deck();
-        upper_deck();
+        #upper_deck();
         ramp();
       }
       inner_lower_deck(lower_height + 1);
-      inner_upper_deck();
+      #color("blue")inner_upper_deck();
     }
 
     color("blue") difference() {
@@ -103,15 +122,9 @@ difference() {
         inner_lower_deck(lower_ramp);
       }
     }
-
-    difference() {
-      color("green") translate([0,0,upper_height - upper_bowl_height - upper_plate_thickness - lower_height]) inner_upper_deck(upper_plate_thickness);
-      for (x = [0:4]) {
-        x_offset = getChannelSpacing(x);
-        translate([x_offset - channel_radius, wall + channel_spacing, 0]) cube([channel_radius * 2, channel_radius * 2, 100]);
-      }
-    }
+    *translate([0,0,plate_height]) upper_plate();
+    translate([-200,0,0]) upper_plate();
+    stud();
   }
-  #channels();
-  translate([width / 2 + 42, upper_depth / 2, 20 + lower_height + 1]) linear_extrude(20) rotate(180) text("Potion Explosion", size = 10, font = "Z003");
+  channels();
 }
