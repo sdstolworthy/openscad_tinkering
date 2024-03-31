@@ -53,16 +53,15 @@ module channel(channel_number) {
 
 module ramp(x, y, z) {
   polyhedron(points = [
-    [wall, wall, lower_ramp],
-    [wall, total_depth , lower_ramp],
-    [width - wall, total_depth , lower_ramp],
-    [width - wall, wall, lower_ramp],
-    [wall, wall, upper_ramp],
-    [width - wall, wall, upper_ramp]
+    [0, 0, 0],
+    [0, y , 0],
+    [x, y , 0],
+    [x, 0, 0],
+    [0, 0, z],
+    [x, 0, z]
   ], faces=[[0,1,2,3],[5,4,3,2],[0,4,5,1],[0,3,4],[5,2,1]]);
 }
 
-ramp(width - wall * 2, total_depth, upper_ramp - lower_ramp)
 
 module channels() {
   for (x_index = [0:4]) {
@@ -99,32 +98,69 @@ module upper_plate() {
   }
 }
 
-module stud() {
-  cylinder(r=3, $fn = 3);
+module stud(width = 5, depth = 1, height = 4) {
+  translate([0, 0, height]) rotate(-90,[1,0,0]) ramp(width, height, depth);
+}
+
+module studs() {
+  height = 4;
+  depth = 1;
+  side_width = upper_depth - 20;
+  
+  color("green") translate([ wall, upper_depth - wall - side_width - corner_radius, plate_height - height]) rotate(90) mirror([0,1,0]) stud(depth=depth, height=height, width = side_width);
+  color("green") translate([width - wall, upper_depth - wall - side_width - corner_radius, plate_height - height]) rotate(90) stud(depth=depth, height=height, width = side_width);
+  color("green") translate([wall + corner_radius, wall , plate_height - height]) stud(depth=depth, height=height, width = width - wall * 2 - corner_radius * 2);
+  color("green") translate([wall + corner_radius, upper_depth - wall, plate_height - height]) mirror([0,1,0]) stud(depth=depth, height=height, width = width - wall * 2 - corner_radius * 2);
+}
+
+module full_base() {
+  difference() {
+    union() {
+      difference() {
+        union() {
+          lower_deck();
+          upper_deck();
+        }
+        inner_lower_deck(lower_height + 1);
+        inner_upper_deck();
+      }
+      translate([wall, wall, lower_ramp]) ramp(width - wall * 2, total_depth - wall , ramp_delta);
+
+      difference() {
+        union() {
+          translate([wall,wall,lower_ramp]) ramp();
+          inner_lower_deck(lower_ramp);
+        }
+      }
+      *translate([0,0,plate_height]) upper_plate();
+      *translate([-200,0,0]) upper_plate();
+      studs();
+    }
+    channels();
+  }
+}
+
+module locking_mechanism() {
+  translate([wall + 3, upper_depth + 0.5, 0]) rotate(30) cylinder(r=4, h = lower_height - 12, $fn = 3);
+  translate([width - wall - 3, upper_depth + 0.5, 0]) rotate(30) cylinder(r=4, h = lower_height - 12, $fn = 3);
 }
 
 
-difference() {
+module lower_base() {
+  translate([0, -upper_depth, 0]) difference() {
+    difference() {
+      full_base();
+      translate([0, 0, 0]) cube([width, upper_depth, upper_height + 5]);
+    }
+    locking_mechanism();
+  }
+}
+module upper_base() {
   union() {
     difference() {
-      union() {
-        lower_deck();
-        #upper_deck();
-        ramp();
-      }
-      inner_lower_deck(lower_height + 1);
-      #color("blue")inner_upper_deck();
+      full_base();
+      translate([0, upper_depth + 0.01, 0]) cube([width, lower_depth, upper_height + 5]);
     }
-
-    color("blue") difference() {
-      union() {
-        ramp();
-        inner_lower_deck(lower_ramp);
-      }
-    }
-    *translate([0,0,plate_height]) upper_plate();
-    translate([-200,0,0]) upper_plate();
-    stud();
+    locking_mechanism();
   }
-  channels();
 }
