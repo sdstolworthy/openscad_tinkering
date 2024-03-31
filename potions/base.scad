@@ -1,6 +1,6 @@
 upper_bowl_back_lip = 3;
 marble_size = 16.8;
-marble_scale_factor = 1.5;
+marble_scale_factor = 1.28;
 adjusted_marble_size = marble_size * marble_scale_factor;
 lower_depth = 140;
 upper_depth = 128;
@@ -124,11 +124,10 @@ module full_base() {
         inner_lower_deck(lower_height + 1);
         inner_upper_deck();
       }
-      translate([wall, wall, lower_ramp]) ramp(width - wall * 2, total_depth - wall , ramp_delta);
+      translate([wall, wall, lower_ramp]) ramp(width - wall * 2, total_depth - wall, ramp_delta);
 
       difference() {
         union() {
-          translate([wall,wall,lower_ramp]) ramp();
           inner_lower_deck(lower_ramp);
         }
       }
@@ -145,11 +144,23 @@ module locking_mechanism() {
   translate([width - wall - 3, upper_depth + 0.5, 0]) rotate(30) cylinder(r=4, h = lower_height - 12, $fn = 3);
 }
 
+module inverse_ramp() {
+  ramp_height = lower_depth * tan(90 - beta);
+  ramp_offset = 4;
+  translate([0, upper_depth + lower_depth, lower_height - ramp_offset])
+  color("red")
+  union() {
+    rotate(180, [1,0,0]) ramp(width, lower_depth + wall, ramp_height);
+    translate([0,-lower_depth,0])
+    cube([width, lower_depth, deck_difference]);
+  }
+}
 
 module lower_base() {
   translate([0, -upper_depth, 0]) difference() {
     difference() {
       full_base();
+      inverse_ramp();
       translate([0, 0, 0]) cube([width, upper_depth, upper_height + 5]);
     }
     locking_mechanism();
@@ -164,3 +175,6 @@ module upper_base() {
     locking_mechanism();
   }
 }
+
+
+upper_base();
