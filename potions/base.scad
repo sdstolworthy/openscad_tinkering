@@ -11,7 +11,7 @@ upper_plate_thickness = 3;
 channel_radius = adjusted_marble_size / 2;
 upper_height = upper_ramp - channel_radius + adjusted_marble_size + upper_plate_thickness + upper_bowl_height;
 plate_height = upper_height - upper_bowl_height - upper_plate_thickness;
-lower_height = 26;
+lower_height = 21;
 deck_difference = upper_height - lower_height;
 total_depth = lower_depth + upper_depth;
 wall = 2.8;
@@ -42,11 +42,11 @@ function getChannelSpacing(number) =
   wall + channel_radius + (number * 2 * channel_radius) + channel_spacing + channel_spacing * number;
 
 
-module channel(channel_number) {
+module channel(channel_number, length, height) {
   x_offset = getChannelSpacing(channel_number);
-  translate([x_offset, wall, upper_ramp]){
+  translate([x_offset, 0, height]){
     rotate(180 - beta, [-1,0,0]) {
-      cylinder(r=channel_radius, h = 250, $fn = 100);
+      cylinder(r=channel_radius, h = length, $fn = 100);
     }
   }
 }
@@ -63,25 +63,44 @@ module ramp(x, y, z) {
 }
 
 
-module channels() {
+module channels(length, height) {
   for (x_index = [0:4]) {
-    channel(x_index);
+    channel(x_index, length = length, height = height);
   }
 }
 
+function hypotenuse(a, b) = sqrt(a^2 + b^2);
+
 module lower_deck(height = lower_height) {
+  ramp_height = lower_depth * tan(90 - beta);
+  cylinder_length = hypotenuse(lower_depth - wall * 2, ramp_height);
   // base deck
- deck(total_depth, width, height);
+  difference(){
+    deck(lower_depth, width, height);
+    inverse_ramp(ramp_height);
+    locking_mechanism(4.8);
+    channel_height = lower_depth * tan(90-beta) + lower_ramp ;
+    channels(cylinder_length, channel_height);
+  }
 }
 
 module upper_deck() {
   // upper deck
- translate([0,0,lower_height]) deck(upper_depth, width, deck_difference);
+ upper_ramp_height = (upper_depth + wall) * tan(90 - beta);
+ difference() {
+   union() {
+     difference() {
+      translate([0,0,0]) deck(upper_depth, width, upper_height);
+      inner_upper_deck();
+     }
+     color("green") translate([wall, wall, lower_height]) ramp(width - wall * 2, upper_depth - wall, upper_ramp_height);
+     translate([0, upper_depth, 0]) locking_mechanism(4);
+   }
+   cylinder_length = hypotenuse(upper_depth - wall, upper_ramp_height);
+   translate([0,wall,0]) channels(cylinder_length + 1, upper_ramp);
+ }
 }
 
-module inner_lower_deck(height = lower_height) {
-  translate([wall, wall, wall]) deck(total_depth - wall * 2, width - wall * 2, height - wall);
-}
 
 module inner_upper_deck(height = deck_difference, z = lower_height) {
   translate([wall, wall, z]) deck(upper_depth - wall * 2, width - wall * 2, height);
@@ -114,67 +133,42 @@ module studs() {
 }
 
 module full_base() {
-  difference() {
-    union() {
-      difference() {
-        union() {
-          lower_deck();
-          upper_deck();
-        }
-        inner_lower_deck(lower_height + 1);
-        inner_upper_deck();
-      }
-      translate([wall, wall, lower_ramp]) ramp(width - wall * 2, total_depth - wall, ramp_delta);
+  union() {
+    upper_base();
+    translate([0, upper_depth, 0]) lower_deck(lower_height);
 
-      difference() {
-        union() {
-          inner_lower_deck(lower_ramp);
-        }
-      }
-      *translate([0,0,plate_height]) upper_plate();
-      *translate([-200,0,0]) upper_plate();
-      studs();
-    }
-    channels();
+    *translate([0,0,plate_height]) upper_plate();
+    *translate([-200,0,0]) upper_plate();
+    studs();
   }
 }
 
-module locking_mechanism() {
-  translate([wall + 3, upper_depth + 0.5, 0]) rotate(30) cylinder(r=4, h = lower_height - 12, $fn = 3);
-  translate([width - wall - 3, upper_depth + 0.5, 0]) rotate(30) cylinder(r=4, h = lower_height - 12, $fn = 3);
+module locking_mechanism(size = 4) {
+  lock_height = lower_height - 6;
+  translate([wall + 3, 0.5, 0]) rotate(30) cylinder(r=size, h = lock_height, $fn = 3);
+  translate([width - wall - 3, 0.5, 0]) rotate(30) cylinder(r=4, h = lock_height, $fn = 3);
 }
 
-module inverse_ramp() {
-  ramp_height = lower_depth * tan(90 - beta);
-  ramp_offset = 4;
-  translate([0, upper_depth + lower_depth, lower_height - ramp_offset])
+module inverse_ramp(height) {
+  translate([0, lower_depth, lower_height])
   color("red")
   union() {
-    rotate(180, [1,0,0]) ramp(width, lower_depth + wall, ramp_height);
+    rotate(180, [1,0,0]) ramp(width, lower_depth + wall, height);
     translate([0,-lower_depth,0])
     cube([width, lower_depth, deck_difference]);
   }
 }
 
 module lower_base() {
-  translate([0, -upper_depth, 0]) difference() {
-    difference() {
-      full_base();
-      inverse_ramp();
-      translate([0, 0, 0]) cube([width, upper_depth, upper_height + 5]);
-    }
-    locking_mechanism();
+  translate([0, upper_depth, 0]) difference() {
+    lower_deck();
   }
 }
 module upper_base() {
-  union() {
-    difference() {
-      full_base();
-      translate([0, upper_depth + 0.01, 0]) cube([width, lower_depth, upper_height + 5]);
-    }
-    locking_mechanism();
-  }
+  upper_deck();
 }
 
+*upper_deck();
+*translate([0,upper_depth,0]) lower_deck();
+full_base();
 
-upper_base();
